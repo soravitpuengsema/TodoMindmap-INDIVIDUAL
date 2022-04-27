@@ -258,7 +258,7 @@ function NowScreen({ navigation }) {
             return (
               <View key ={index} style={styles.container} accessibilityLabel='Todo'>
                 <Card>
-                  <Card.Title  title={todo.title} subtitle={todo.duedate} left={() => checkbox(todo)}  right={() => star(todo)}/>
+                  <Card.Title  title={todo.title} subtitle={todo.description} left={() => checkbox(todo)}  right={() => star(todo)}/>
                   <Card.Actions>
                     <Button accessibilityLabel='Detail' theme={theme} onPress={() => [setTitleView(todo.title),setDescView(todo.description),setIsDialogVisibleView(true)]}>View Details</Button>
                     <Button accessibilityLabel='Edit' color='green' onPress={() => [setTitleEdit(todo.title),setDescEdit(todo.description),setTodoEdit(todo),setIsDialogVisibleEdit(true)]}>Edit</Button>
@@ -536,7 +536,7 @@ function CompletedScreen({ navigation }) {
           return (
             <View key ={index} style={styles.container} accessibilityLabel='CompletedTodo'>
               <Card>
-                <Card.Title title={todo.title} subtitle={todo.duedate} left={() => checkbox(todo)}/>
+                <Card.Title title={todo.title} subtitle={todo.description} left={() => checkbox(todo)}/>
                 <Card.Actions>
                   <Button theme={theme} onPress={() => [setTitleView(todo.title),setDescView(todo.description),setIsDialogVisibleView(true)]}>View Details</Button>
                   <Button accessibilityLabel='DeleteCompletedTodo' color='red' onPress={() => [setTodoDelete(todo),setIsDialogVisibleDelete(true)]}>Delete</Button>

@@ -36,3 +36,35 @@
     transform: rotate(360deg);
   }
 }
+
+.menu {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+.menu-item {
+  cursor: pointer;
+  padding: 5px;
+  height: 28px;
+  border-bottom: 1px solid rgb(187, 187, 187);
+}
+.menu-item:hover {
+  color: #2980b9;
+}
+
+.modal {
+  font-size: 12px;
+}
+
+.container {
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  border-style: solid;
+  border-color:rgb(218, 218, 218);
+  background: #ffffff;
+  box-shadow: 3px 5px 10px rgb(176, 176, 176);
+}

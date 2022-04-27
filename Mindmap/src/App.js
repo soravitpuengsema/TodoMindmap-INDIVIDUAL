@@ -5,7 +5,10 @@ import MindElixir, { E } from "mind-elixir";
 import painter from 'mind-elixir/dist/painter';
 import PptxGenJS from "pptxgenjs";
 import { Button, Form } from 'react-bootstrap';
-import TodoListDataService from "./services/todo.service"
+import TodoListDataService from "./services/todo.service";
+import Popup from 'reactjs-popup';
+import { Scrollbars } from 'react-custom-scrollbars-2';
+import mindmaptotodo from './tutorial.png';
 
 var mindstring = '';
 
@@ -307,8 +310,8 @@ function App() {
             .catch(e => {
                 console.log(e);
             });
-
         }
+        window.alert("Add Todo Completed");
       })
       .catch(e => {
         console.log(e);
@@ -354,6 +357,10 @@ function App() {
     return objArray;
   }
 
+  const helpPopup = () => {
+
+  }
+
   return (
     <>
     <div>
@@ -365,10 +372,25 @@ function App() {
     <div >
       <Button variant="outline-secondary" onClick={() => paint()}>Export PNG</Button>{' '}
       <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}
-      <Button variant="outline-danger" onClick={() => onExport()}>Export PPTX</Button>
+      <Button variant="outline-danger" onClick={() => onExport()}>Export PPTX</Button>{' '}
       <Button variant="outline-success" onClick={() => exportTodo()}>Export to Todo</Button>{' '}
+      <Popup
+        trigger={<Button variant="outline-secondary">TodoList Help</Button>} modal>
+          <div className='container'>
+            <div style={{fontWeight: 'bold', textAlign: 'center', marginTop: '15px', fontSize: '25px'}}> Create Mindmap for Todo List </div>
+            <div style ={{textAlign: 'center', marginBottom: '15px'}}>
+              <br />
+              การจะ Export Mindmap ไปยัง TodoList นั้น Mindmap จะต้องมีเงื่อนไขดังนี้
+              <br />
+              <img src={mindmaptotodo} style={{height:'400px'}}></img>
+              <br />
+              ลูกของหัวข้อจะเป็น Title รายการ Todo และลูกของ Title นั้นจะเป็น Description ซึ่งเมื่อกดปุ่ม Export ไปยัง Todo App แล้วจะเป็นไปดังภาพ
+              <br />
+            </div>
+          </div>
+      </Popup>
     </div>
-    <div id="map" style={{ height: "800px", width: "100%" }} />
+    <div id="map" style={{ height: "600px", width: "100%" }} />
     </>
   );
 }
