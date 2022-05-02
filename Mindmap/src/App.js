@@ -9,6 +9,9 @@ import TodoListDataService from "./services/todo.service";
 import Popup from 'reactjs-popup';
 import { Scrollbars } from 'react-custom-scrollbars-2';
 import mindmaptotodo from './tutorial.png';
+import Fab from '@mui/material/Fab';
+import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
+import { paperClasses } from '@mui/material';
 
 var mindstring = '';
 
@@ -16,53 +19,135 @@ let datajson = '';
 
 function App() {
 
-  let options = {
-    el: "#map",
-    direction: MindElixir.LEFT,
-    data: MindElixir.new("new topic"),
-    draggable: true,
-    contextMenu: true,
-    toolBar: true,
-    nodeMenu: true,
-    keypress: true,
-    allowUndo: true,
-    contextMenuOption: {
-      focus: true,
-      link: true,
-      extend: [
-        {
-          name: 'Node edit',
-          onclick: () => {
-            
-          },
-        },
-      ],
-    },
-  }
-
   let mind = null;
 
   useEffect(() => {
 
-    mind = new MindElixir(options);
+    TodoListDataService.getAll()
+    .then(response =>{
+      if ( response !== null ) {
+        var datadb = databaseToJSON(response.data);
+        let options = {
+          el: "#map",
+          direction: MindElixir.LEFT,
+          data: datadb,
+          draggable: true,
+          contextMenu: true,
+          toolBar: true,
+          nodeMenu: true,
+          keypress: true,
+          allowUndo: true,
+          contextMenuOption: {
+            focus: true,
+            link: true,
+            extend: [
+              {
+                name: '',
+                onclick: () => {
+                  
+                },
+              },
+            ],
+          },
+        }
+        mind = new MindElixir(options);
 
-    mind.initSide();
-
-    mind.getAllDataString();
-
-    mind.bus.addListener('operation', operation => {
-
-      console.log(operation);
-      mindstring = mind.getAllData();
-
+        mind.initSide();
+    
+        mind.getAllDataString();
+    
+        mind.bus.addListener('operation', operation => {
+    
+          console.log(operation);
+          mindstring = mind.getAllData();
+          //console.log(operation.name);
+    
+          //เพิ่ม tags Todo
+          if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
+            if ( operation.name == 'editTags' || operation.name == 'removeNode' || operation.name == 'finishEdit') {
+              if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
+                console.log(operation);
+                console.log("====Todo Title trigger====")
+                //create db code
+                let todoObj = [];
+                let mindTodo = mind.getAllData();
+                todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+                console.log(todoObj);
+                exportTodo(todoObj)
+              }
+            }
+          } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
+            if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
+              if ( operation.obj.parent.tags.includes('Todo') ) {
+                console.log(operation);
+                console.log("====Todo Desc trigger====")
+                //console.log(operation.obj.parent);
+                //update db code
+                let todoObj = [];
+                let mindTodo = mind.getAllData();
+                todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+                console.log(todoObj);
+                exportTodo(todoObj)
+              }
+            }
+          }
+        })
+      }
     })
-    mind.bus.addListener('selectNode', node => {
-    })
-
-    mind.bus.addListener('expandNode', node => {
+    .catch(e =>{
+      console.log(e);
     })
   },[]);
 
+  const exportTodo = (todoData) => {
+    TodoListDataService.deleteAll()
+      .then(response => {
+        //console.log('Delete old Todo')
+        for (var k = 0 ; k < todoData.length ; k++){
+
+          TodoListDataService.create(todoData[k])
+            .then(response => {
+                console.log('Add ',response.data);
+            })
+            .catch(e => {
+                console.log(e);
+            });
+        }
+        //window.alert("Add Todo Completed");
+      })
+      .catch(e => {
+        console.log(e);
+    });
+  }
+
+  //Export to Todo App by button (manually)
+  const exportTodoManually = () => {
+
+    var mindTodo = mind.getAllData();
+    var todoObj = [];
+    todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+
+    console.log(todoObj);
+
+    TodoListDataService.deleteAll()
+      .then(response => {
+        console.log('Delete old Todo')
+        for (var k = 0 ; k < todoObj.length ; k++){
+
+          TodoListDataService.create(todoObj[k])
+            .then(response => {
+                console.log('Add ',response.data);
+            })
+            .catch(e => {
+                console.log(e);
+            });
+        }
+        window.alert("Add Todo Completed");
+      })
+      .catch(e => {
+        console.log(e);
+    });
+  }
 
   //Export JSON
   const exportData = () => {
@@ -102,7 +187,7 @@ function App() {
         link: true,
         extend: [
           {
-            name: 'Undo',
+            name: '',
             onclick: () => {
               
             },
@@ -121,19 +206,150 @@ function App() {
 
     mind.bus.addListener('operation', operation => {
 
+      console.log(operation);
       mindstring = mind.getAllData();
-      console.log(mindstring);
-      console.log(mind.history);
 
-    })
-    mind.bus.addListener('selectNode', node => {
-    })
+      console.log(operation);
+      mindstring = mind.getAllData();
+      //console.log(operation.name);
 
-    mind.bus.addListener('expandNode', node => {
+      //เพิ่ม tags Todo
+      if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
+        if ( operation.name == 'editTags' || operation.name == 'removeNode' || operation.name == 'finishEdit') {
+          if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
+            console.log(operation);
+            console.log("====Todo Title trigger====")
+            //create db code
+            let todoObj = [];
+            let mindTodo = mind.getAllData();
+            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+            console.log(todoObj);
+            exportTodo(todoObj)
+          }
+        }
+      } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
+        if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
+          if ( operation.obj.parent.tags.includes('Todo') ) {
+            console.log(operation);
+            console.log("====Todo Desc trigger====")
+            //console.log(operation.obj.parent);
+            //update db code
+            let todoObj = [];
+            let mindTodo = mind.getAllData();
+            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+            console.log(todoObj);
+            exportTodo(todoObj)
+          }
+        }
+      }
+
     })
   }
 
-  const FrontPagePPTX = (obj,pptx) => {
+  //ไม่ได้ใช้ ณ ตอนนี้
+  const getDatabase = () => {
+  }
+
+  //ไม่ได้ใช้ ณ ตอนนี้
+  const databaseToJSON = (db) => {
+    var dbjson = {
+      "nodeData": {
+        "id": Date.now()+"root",
+        "topic": "Todo",
+        "root": true,
+        "children": []
+      }
+    }
+    console.log(dbjson)
+    console.log(db)
+
+    const result = Array.from(new Set(db.map(s => s.title)))
+    .map(titles => {
+      var desctemp = [];
+      var arraytemp = db.filter(s => s.title === titles).map(a => a.description);
+      for (let i = 0 ; i < arraytemp.length ; i++) {
+        if (arraytemp[i] == null) {
+
+        } else {
+          desctemp.push({
+            "topic": arraytemp[i],
+            "id": Date.now()+arraytemp[i]
+          })
+        }
+      }
+      return {
+        topic: titles,
+        id: Date.now()+titles,
+        tags: ['Todo'],
+        children: desctemp
+      }
+    })
+    console.log(result);
+    dbjson.nodeData.children = result;
+    console.log(dbjson);
+    return dbjson;
+  }
+
+  //แปลง Mindmap เป็น Todo เฉพาะที่มี tags 'Todo'
+  const getAllTodo = (obj,objArray) => {
+
+    for (var i = 0 ; i < obj.children.length ; i++){ //ไล่ทุกลูกของ root => Title Todo
+
+      //console.log(obj.children[i].topic)
+
+      if ( obj.children[i].hasOwnProperty('tags') ) {
+        for ( var j = 0 ; j < obj.children[i].tags.length ; j++) {
+          if ( obj.children[i].tags[j] == 'Todo' ) {
+            if ( !obj.children[i].hasOwnProperty('children') ){  //ถ้าไม่มีลูกต่อ (Desc) ให้สร้างรายการเลย
+
+              var tododata = 
+              {
+                title: obj.children[i].topic,
+                description: null,
+                published: false,
+                priority: false,
+                duedate: null
+              }
+              objArray.push(tododata);
+
+            } else {
+
+              for (var j = 0 ; j < obj.children[i].children.length ; j++){
+
+                var tododata = 
+                {
+                  title: obj.children[i].topic,
+                  description: obj.children[i].children[j].topic,
+                  published: false,
+                  priority: false,
+                  duedate: null
+                }
+                objArray.push(tododata);
+                //console.log(tododata);
+
+              }
+            }
+            break;
+          }
+        }
+      }
+    }
+    return objArray;
+  }
+
+  //Choose File
+  const readJSON = (e) => {
+    const fileReader = new FileReader();
+    fileReader.readAsText(e.target.files[0], "UTF-8");
+    fileReader.onload = e => {
+      console.log("e.target.result", e.target.result);
+      datajson = e.target.result;
+      importData(datajson);
+    };
+  };
+
+  //Create powerpoint slide
+  const createFirstSlide = (obj,pptx) => {
     if (obj.length === 0){
       return;
     } else {
@@ -145,8 +361,8 @@ function App() {
     }
   }
 
-  //Export to powerpoint krub
-  const recursive = (obj,pptx) => {
+  //Export to powerpoint
+  const createSlide = (obj,pptx) => {
     //var mindObj = mind.getAllData()
     //console.log(obj.topic);
     
@@ -263,103 +479,22 @@ function App() {
       slide.addText(childrentext, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top"});
 
       for (var j = 0 ; j < obj.children.length ; j++){
-        recursive(obj.children[j],pptx);
+        createSlide(obj.children[j],pptx);
       }
 
     }
   }
 
-  const onExport = () => {
+  //Download pptx
+  const exportPPTX = () => {
 
     var pptx = new PptxGenJS();
     var mindObj = mind.getAllData();
-    FrontPagePPTX(mindObj.nodeData.topic, pptx);
-    recursive(mindObj.nodeData,pptx);
+    createFirstSlide(mindObj.nodeData.topic, pptx);
+    createSlide(mindObj.nodeData,pptx);
     pptx.writeFile({ fileName: "mindmap.pptx" });
 
   };
-
-  //Choose File
-  const readJSON = (e) => {
-      const fileReader = new FileReader();
-      fileReader.readAsText(e.target.files[0], "UTF-8");
-      fileReader.onload = e => {
-        console.log("e.target.result", e.target.result);
-        datajson = e.target.result;
-        importData(datajson);
-      };
-    };
-
-  const exportTodo = () => {
-
-    var mindTodo = mind.getAllData();
-    var todoObj = [];
-    todoObj = getTodo(mindTodo.nodeData,todoObj);
-
-    console.log(todoObj);
-
-    TodoListDataService.deleteAll()
-      .then(response => {
-        console.log('Delete old Todo')
-        for (var k = 0 ; k < todoObj.length ; k++){
-
-          TodoListDataService.create(todoObj[k])
-            .then(response => {
-                console.log('Add ',response.data);
-            })
-            .catch(e => {
-                console.log(e);
-            });
-        }
-        window.alert("Add Todo Completed");
-      })
-      .catch(e => {
-        console.log(e);
-    });
-  }
-
-  const getTodo = (obj,objArray) => {
-
-    for (var i = 0 ; i < obj.children.length ; i++){ //ไล่ทุกลูกของ root => Title Todo
-
-      console.log(obj.children[i].topic)
-
-      if ( !obj.children[i].hasOwnProperty('children') ){  //ถ้าไม่มีลูกต่อ (Desc) ให้สร้างรายการเลย
-
-        var tododata = 
-        {
-          title: obj.children[i].topic,
-          description: null,
-          published: false,
-          priority: false,
-          duedate: null
-        }
-        objArray.push(tododata);
-
-      } else {
-
-        for (var j = 0 ; j < obj.children[i].children.length ; j++){
-
-          var tododata = 
-          {
-            title: obj.children[i].topic,
-            description: obj.children[i].children[j].topic,
-            published: false,
-            priority: false,
-            duedate: null
-          }
-          objArray.push(tododata);
-          console.log(tododata);
-
-        }
-      }
-    }
-    return objArray;
-  }
-
-  const helpPopup = () => {
-
-  }
 
   return (
     <>
@@ -371,11 +506,18 @@ function App() {
     </div>
     <div >
       <Button variant="outline-secondary" onClick={() => paint()}>Export PNG</Button>{' '}
-      <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}
-      <Button variant="outline-danger" onClick={() => onExport()}>Export PPTX</Button>{' '}
-      <Button variant="outline-success" onClick={() => exportTodo()}>Export to Todo</Button>{' '}
+      <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}    
       <Popup
-        trigger={<Button variant="outline-secondary">TodoList Help</Button>} modal>
+        trigger={<Fab
+            sx={{
+              position: "fixed",
+              bottom: (theme) => theme.spacing(2),
+              right: (theme) => theme.spacing(2)
+            }}
+            color="secondary"
+    >
+            <QuestionMarkIcon />
+          </Fab>} modal>
           <div className='container'>
             <div style={{fontWeight: 'bold', textAlign: 'center', marginTop: '15px', fontSize: '25px'}}> Create Mindmap for Todo List </div>
             <div style ={{textAlign: 'center', marginBottom: '15px'}}>
