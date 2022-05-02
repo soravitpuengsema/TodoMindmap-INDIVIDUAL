@@ -12,20 +12,28 @@ import mindmaptotodo from './tutorial.png';
 import Fab from '@mui/material/Fab';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import { paperClasses } from '@mui/material';
+import hotkeys from 'hotkeys-js';
 
 var mindstring = '';
 
 let datajson = '';
 
+let updateCheck = false;
+
 function App() {
 
   let mind = null;
+  let selectnode = null;
+  let dbnow = null;
+  let dbMindmap = null;
 
   useEffect(() => {
 
     TodoListDataService.getAll()
     .then(response =>{
       if ( response !== null ) {
+        dbnow = response.data;
+        dbMindmap = response.data;
         var datadb = databaseToJSON(response.data);
         let options = {
           el: "#map",
@@ -42,9 +50,10 @@ function App() {
             link: true,
             extend: [
               {
-                name: '',
+                name: 'Todo Tag',
                 onclick: () => {
-                  
+                  console.log('todotagselectnode ',selectnode)
+                  mind.updateNodeTags(selectnode,['Todo'])
                 },
               },
             ],
@@ -55,10 +64,19 @@ function App() {
         mind.initSide();
     
         mind.getAllDataString();
+
+        hotkeys('t', function(event, handler) {
+          event.preventDefault();
+          //console.log('you pressed alt!');
+          console.log('todotagselectnode ',selectnode)
+          if ( selectnode !== undefined && selectnode !== null ) {
+            mind.updateNodeTags(selectnode,['Todo'])
+          }
+        });
     
         mind.bus.addListener('operation', operation => {
     
-          console.log(operation);
+          //console.log(operation);
           mindstring = mind.getAllData();
           //console.log(operation.name);
     
@@ -92,6 +110,16 @@ function App() {
             }
           }
         })
+
+        mind.bus.addListener('selectNode', node => {
+          //console.log('selectnode ',node)
+          selectnode = node;
+        })
+
+        mind.bus.addListener('unselectNode', node => {
+          //console.log('UNselectnode ',node)
+          selectnode = node;
+        })
       }
     })
     .catch(e =>{
@@ -99,7 +127,130 @@ function App() {
     })
   },[]);
 
+  //get db ทุกๆ 4 วิ โดยจะต้องไม่ได้กดโนดและไม่ได้ทำการอัพเดท db อยู่
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('check DB every 3 seconds');
+      TodoListDataService.getAll()
+      .then(response =>{
+        //console.log(response.data);
+        //console.log(dbMindmap);
+        //console.log(JSON.stringify(response.data) == JSON.stringify(dbMindmap))
+        if(!(JSON.stringify(response.data) == JSON.stringify(dbMindmap)) && selectnode == undefined && updateCheck == false){
+          console.log('update Mindmap');
+          dbMindmap = response.data;
+          let dbjson = databaseToJSON(response.data);
+          mind.nodeData = dbjson.nodeData;
+          mind.refresh();
+        }
+      })
+      .catch(e =>{
+          console.log(e);
+      })
+    }, 3000);
+  
+    return () => clearInterval(interval);
+  }, []);
+
+  //Import JSON then convert to mindmap
+  const importData = (datajson) => {
+
+    var obj = JSON.parse(datajson);
+
+    let optionsdata = {
+      el: "#map",
+      direction: MindElixir.LEFT,
+      data: obj,
+      draggable: true,
+      contextMenu: true,
+      toolBar: true,
+      nodeMenu: true,
+      keypress: true, //true 
+      allowUndo: true, //ทำ undo, redo manual เอง
+      contextMenuOption: {
+        focus: true,
+        link: true,
+        extend: [
+          {
+            name: 'Todo Tag',
+            onclick: () => {
+              console.log('todotagselectnode ',selectnode)
+              mind.updateNodeTags(selectnode,['Todo'])
+            },
+          },
+        ],
+      },
+    }
+
+    mind = new MindElixir(optionsdata);
+
+    hotkeys('t', function(event, handler) {
+      event.preventDefault();
+      //console.log('you pressed alt!');
+      console.log('todotagselectnode ',selectnode)
+      if ( selectnode !== undefined && selectnode !== null ) {
+        mind.updateNodeTags(selectnode,['Todo'])
+      }
+    });
+
+    mind.initSide();
+
+    mind.getAllDataString();
+
+    mindstring = mind.getAllData();
+
+    mind.bus.addListener('operation', operation => {
+
+      console.log(operation);
+      mindstring = mind.getAllData();
+
+      console.log(operation);
+      mindstring = mind.getAllData();
+      //console.log(operation.name);
+
+      //เพิ่ม tags Todo
+      if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
+        if ( operation.name == 'editTags' || operation.name == 'removeNode' || operation.name == 'finishEdit') {
+          if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
+            console.log(operation);
+            console.log("====Todo Title trigger====")
+            //create db code
+            let todoObj = [];
+            let mindTodo = mind.getAllData();
+            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+            console.log(todoObj);
+            exportTodo(todoObj)
+          }
+        }
+      } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
+        if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
+          if ( operation.obj.parent.tags.includes('Todo') ) {
+            console.log(operation);
+            console.log("====Todo Desc trigger====")
+            //console.log(operation.obj.parent);
+            //update db code
+            let todoObj = [];
+            let mindTodo = mind.getAllData();
+            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
+            console.log(todoObj);
+            exportTodo(todoObj)
+          }
+        }
+      }
+
+    })
+    mind.bus.addListener('selectNode', node => {
+      console.log('selectnode ',node)
+      selectnode = node;
+    })
+    mind.bus.addListener('unselectNode', node => {
+      console.log('selectnode ',node)
+      selectnode = node;
+    })
+  }
+
   const exportTodo = (todoData) => {
+    updateCheck = true;
     TodoListDataService.deleteAll()
       .then(response => {
         //console.log('Delete old Todo')
@@ -113,10 +264,24 @@ function App() {
                 console.log(e);
             });
         }
+        console.log('wait 2 seconds')
+        setTimeout(() => { console.log('wait done');
+
+          TodoListDataService.getAll()
+            .then(response => {
+              dbMindmap = response.data
+              updateCheck = false;
+            })
+            .catch(e => {
+              console.log(e)
+            });
+
+        }, 2000);
         //window.alert("Add Todo Completed");
       })
       .catch(e => {
         console.log(e);
+        updateCheck = false;
     });
   }
 
@@ -167,90 +332,11 @@ function App() {
     painter.exportPng(mind,'picture');
   }
 
-  //Import JSON then convert to mindmap
-  const importData = (datajson) => {
-
-    var obj = JSON.parse(datajson);
-
-    let optionsdata = {
-      el: "#map",
-      direction: MindElixir.LEFT,
-      data: obj,
-      draggable: true,
-      contextMenu: true,
-      toolBar: true,
-      nodeMenu: true,
-      keypress: true, //true 
-      allowUndo: true, //ทำ undo, redo manual เอง
-      contextMenuOption: {
-        focus: true,
-        link: true,
-        extend: [
-          {
-            name: '',
-            onclick: () => {
-              
-            },
-          },
-        ],
-      },
-    }
-
-    mind = new MindElixir(optionsdata);
-
-    mind.initSide();
-
-    mind.getAllDataString();
-
-    mindstring = mind.getAllData();
-
-    mind.bus.addListener('operation', operation => {
-
-      console.log(operation);
-      mindstring = mind.getAllData();
-
-      console.log(operation);
-      mindstring = mind.getAllData();
-      //console.log(operation.name);
-
-      //เพิ่ม tags Todo
-      if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
-        if ( operation.name == 'editTags' || operation.name == 'removeNode' || operation.name == 'finishEdit') {
-          if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
-            console.log(operation);
-            console.log("====Todo Title trigger====")
-            //create db code
-            let todoObj = [];
-            let mindTodo = mind.getAllData();
-            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-            console.log(todoObj);
-            exportTodo(todoObj)
-          }
-        }
-      } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
-        if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
-          if ( operation.obj.parent.tags.includes('Todo') ) {
-            console.log(operation);
-            console.log("====Todo Desc trigger====")
-            //console.log(operation.obj.parent);
-            //update db code
-            let todoObj = [];
-            let mindTodo = mind.getAllData();
-            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-            console.log(todoObj);
-            exportTodo(todoObj)
-          }
-        }
-      }
-
-    })
-  }
-
   //ไม่ได้ใช้ ณ ตอนนี้
   const getDatabase = () => {
   }
 
-  //ไม่ได้ใช้ ณ ตอนนี้
+  //แปลง db response.data ทีได้เป็นในรูป mindmap json
   const databaseToJSON = (db) => {
     var dbjson = {
       "nodeData": {
@@ -260,8 +346,8 @@ function App() {
         "children": []
       }
     }
-    console.log(dbjson)
-    console.log(db)
+    //console.log(dbjson)
+    //console.log(db)
 
     const result = Array.from(new Set(db.map(s => s.title)))
     .map(titles => {
@@ -284,9 +370,9 @@ function App() {
         children: desctemp
       }
     })
-    console.log(result);
+    console.log('node add from db',result);
     dbjson.nodeData.children = result;
-    console.log(dbjson);
+    console.log('Mindmap ',dbjson);
     return dbjson;
   }
 
@@ -300,7 +386,7 @@ function App() {
       if ( obj.children[i].hasOwnProperty('tags') ) {
         for ( var j = 0 ; j < obj.children[i].tags.length ; j++) {
           if ( obj.children[i].tags[j] == 'Todo' ) {
-            if ( !obj.children[i].hasOwnProperty('children') ){  //ถ้าไม่มีลูกต่อ (Desc) ให้สร้างรายการเลย
+            if ( !obj.children[i].hasOwnProperty('children') || obj.children[i].children.length == 0){  //ถ้าไม่มีลูกต่อ (Desc) ให้สร้างรายการเลย
 
               var tododata = 
               {
@@ -496,6 +582,10 @@ function App() {
 
   };
 
+  const searchNode = () => {
+    //mind.direction;
+  }
+
   return (
     <>
     <div>
@@ -506,7 +596,8 @@ function App() {
     </div>
     <div >
       <Button variant="outline-secondary" onClick={() => paint()}>Export PNG</Button>{' '}
-      <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}    
+      <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}
+      <Button variant="outline-success" onClick={() => searchNode()}>search</Button>{' '}         
       <Popup
         trigger={<Fab
             sx={{

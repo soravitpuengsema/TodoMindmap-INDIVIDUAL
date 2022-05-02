@@ -15,6 +15,9 @@ const theme = {
   },
 };
 
+var dbtemp = null;
+var dbCheck = false;
+
 const wait = (timeout) => {
   return new Promise(resolve => setTimeout(resolve, timeout));
 }
@@ -29,8 +32,32 @@ function NowScreen({ navigation }) {
   const [refreshing, setRefreshing] = React.useState(false);
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    retrieveTodo();
     wait(2000).then(() => setRefreshing(false));
+  }, []);
+
+  //1
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('check DB every 3 seconds');
+      TodoListDataService.getAll()
+        .then(response =>{
+            if(!(JSON.stringify(response.data) == JSON.stringify(dbtemp)) && dbCheck == false){
+              console.log('UPDATE DB (Mindmap changes)')
+              setTodoSearch(response.data);
+              setDataShow(response.data);
+              console.log(DataShow.length);
+              setNotFound(false);
+              setSearchQuery();
+              dbtemp = response.data;
+            } else {
+              setNotFound(true);
+            }
+        })
+        .catch(e =>{
+            console.log(e);
+        })
+      }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const [DataShow, setDataShow] = useState([]);
@@ -45,7 +72,8 @@ function NowScreen({ navigation }) {
           console.log(DataShow.length);
           setNotFound(false);
           setSearchQuery();
-          //forceUpdate();
+          dbtemp = response.data; //1
+          dbCheck = false; //1
         } else {
           setNotFound(true);
         }
@@ -123,6 +151,7 @@ function NowScreen({ navigation }) {
     setDescAdd(null);
     setDate(new Date(Date.now()))
 
+    dbCheck = true; //1
     TodoListDataService.create(data)
         .then(response => {
             console.log('Add',response.data);
@@ -149,6 +178,7 @@ function NowScreen({ navigation }) {
       duedate: date
     }
     
+    dbCheck = true; //1
     TodoListDataService.update(todoEdit.id,data)
       .then(response => {
           console.log('Edit', response.data);
@@ -167,6 +197,7 @@ function NowScreen({ navigation }) {
   const [isDialogVisibleDelete, setIsDialogVisibleDelete] = useState(false);
 
   const handleDelete = (todo) => {
+    dbCheck = true; //1
     TodoListDataService.delete(todo.id)
     .then(response => {
         console.log('Delete',response.data);
@@ -197,6 +228,7 @@ function NowScreen({ navigation }) {
       priority: todo.priority,
       duedate: todo.duedate
     }
+    dbCheck = true; //1
     TodoListDataService.update(todo.id,data)
       .then(response => {
           console.log('click Completed',response.data);
@@ -225,6 +257,7 @@ function NowScreen({ navigation }) {
       priority: !todo.priority,
       duedate: todo.duedate
     }
+    dbCheck = true; //1
     TodoListDataService.update(todo.id,data)
       .then(response => {
           console.log('click Star',response.data);
