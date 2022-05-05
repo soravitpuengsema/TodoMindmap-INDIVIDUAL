@@ -15,6 +15,8 @@ import { paperClasses } from '@mui/material';
 import hotkeys from 'hotkeys-js';
 import { Box, ChakraProvider } from "@chakra-ui/react";
 
+//
+
 var mindstring = '';
 
 let datajson = '';
