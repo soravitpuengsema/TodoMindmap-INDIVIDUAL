@@ -36,6 +36,7 @@ function App() {
     TodoListDataService.getAll()
     .then(response =>{
       if ( response !== null ) {
+        console.log(response.data);
         dbnow = response.data;
         dbMindmap = response.data;
         var datadb = databaseToJSON(response.data);
@@ -104,36 +105,22 @@ function App() {
               if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
                 console.log(operation);
                 console.log("====Todo Title trigger====")
-
-                let todoObj = [];
-                let mindTodo = mind.getAllData();
-                todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-                console.log(todoObj);
-                exportTodo(todoObj)
+                updateTitleNode(operation);
               }
             }
-          } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
+          } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //desc
             if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
               if ( operation.obj.parent.tags.includes('Todo') ) {
                 console.log(operation);
                 console.log("====Todo Desc trigger====")
-
-                let todoObj = [];
-                let mindTodo = mind.getAllData();
-                todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-                console.log(todoObj);
-                exportTodo(todoObj)
+                updateDescNode(operation);
               }
             }
           }
         })
 
         mind.bus.addListener('selectNode', node => {
-          //console.log('selectnode ',node)
           selectnode = node;
-          //console.log(mind.container);
-          //console.log(document.getElementsByClassName('box')[0]);
-          //console.log(E(node.id));
         })
 
         mind.bus.addListener('unselectNode', node => {
@@ -146,10 +133,9 @@ function App() {
     })
   },[]);
 
-  //get db ทุกๆ 4 วิ โดยจะต้องไม่ได้กดโนดและไม่ได้ทำการอัพเดท db อยู่
+  //get db ทุกๆ 3 วิ โดยจะต้องไม่ได้กดโนดและไม่ได้ทำการอัพเดท db อยู่
   useEffect(() => {
     const interval = setInterval(() => {
-      //console.log('check DB every 3 seconds');
       TodoListDataService.getAll()
       .then(response =>{
         
@@ -160,7 +146,6 @@ function App() {
           let dbjson = databaseToJSON(response.data);
           mind.nodeData = dbjson.nodeData;
           mind.refresh();
-
         }
       })
       .catch(e =>{
@@ -171,136 +156,279 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  //Import ไฟล์ JSON แล้ว convert เป็น mindmap
-  const importData = (datajson) => {
+  //Export ไปยัง Database แบบใหม่ อัพเดทเฉพาะรายการที่แก้ไข
+  const updateTitleNode = (ope) => { //แก้ไขโนดชื่อรายการ Title
+    updateCheck = true;
 
-    updateCheck = true; //ยังไม่ให้อัพเดท db ขณะ import ไฟล์ใหม่
-
-    var obj = JSON.parse(datajson);
-
-    let optionsdata = {
-      el: "#map",
-      direction: MindElixir.LEFT,
-      data: obj,
-      draggable: true,
-      contextMenu: true,
-      toolBar: true,
-      nodeMenu: true,
-      keypress: true, //true 
-      allowUndo: true, //ทำ undo, redo manual เอง
-      contextMenuOption: {
-        focus: true,
-        link: true,
-        extend: [
+    if ( ope.name == 'editTags' && ope.obj.tags.includes('Todo') ) { //เพิ่ม tag todo -ครีเอท
+      console.log('T เพิ่ม tag todo');
+      if ( !ope.obj.hasOwnProperty('children') || ope.obj.children.length == 0 ) { //ไม่มีลูก desc
+        let tododata = 
+        {
+          title: ope.obj.topic,
+          description: null,
+          published: false,
+          priority: false,
+          duedate: null,
+          nodeid: ope.obj.id
+        }
+        TodoListDataService.create(tododata)
+          .then(response => {
+              console.log('Add single todo (no desc)',response.data);
+              afterUpdate();
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else { //มีลูก desc วนแอดที่มี
+        for ( let i = 0 ; i < ope.obj.children.length ; i++ ) {
+          console.log(i)
+          let todotemp =
           {
-            name: 'Todo Tag',
-            onclick: () => {
-              console.log('todotagselectnode ',selectnode)
-              mind.updateNodeTags(selectnode,['Todo'])
-            },
-          },
+            title: ope.obj.topic,
+            description: ope.obj.children[i].topic,
+            published: false,
+            priority: false,
+            duedate: null,
+            nodeid: ope.obj.children[i].id
+          } 
+          TodoListDataService.create(todotemp)
+            .then(response => {
+                console.log('Add multiple',response.data);
+            })
+            .catch(e => {
+                console.log(e);
+            });
+        }
+        setTimeout(() => { console.log('wait 2 seconds');afterUpdate(); }, 2000)
+      }
+    } else if ( ope.name == 'editTags' && ope.origin.includes('Todo') ) { //ลบ tag todo -ลบ
+      console.log('T ลบ tag todo');
+      if ( !ope.obj.hasOwnProperty('children') || ope.obj.children.length == 0 ){ //ไม่มีลูก ลบตัวมันเลย
+        TodoListDataService.delete(ope.obj.id)
+          .then(response => {
+              console.log('Delete single title node',response.data);
+              afterUpdate();
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else { //มีลูก desc ลบรายการ title นี้ให้หมด
+        for ( let i=0 ; i < ope.obj.children.length ; i++ ) {
+          TodoListDataService.delete(ope.obj.children[i].id)
+          .then(response => {
+              console.log('Delete multiple title node',response.data);
+          })
+          .catch(e => {
+              console.log(e);
+          });
+        }
+        setTimeout(() => { console.log('wait 2 seconds');afterUpdate(); }, 2000)
+      }
+
+    } else if ( ope.name == 'removeNode' ) { //ลบโนดไปเลย -ลบ
+      console.log('T ลบโนดไปเลย');
+      if ( !ope.obj.hasOwnProperty('children') || ope.obj.children.length == 0 ){ //ไม่มีลูก ลบตัวมันเลย
+        TodoListDataService.delete(ope.obj.id)
+          .then(response => {
+              console.log('Delete single title node',response.data);
+              afterUpdate();
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else { //มีลูก desc ลบรายการ title นี้ให้หมด
+        for ( let i=0 ; i < ope.obj.children.length ; i++ ) {
+          TodoListDataService.delete(ope.obj.children[i].id)
+          .then(response => {
+              console.log('Delete multiple title node',response.data);
+          })
+          .catch(e => {
+              console.log(e);
+          });
+        }
+        setTimeout(() => { console.log('wait 2 seconds');afterUpdate(); }, 2000)
+      }
+
+    } else if ( ope.name == 'finishEdit' ) { //แก้ไข -อัพเดท
+      console.log('T แก้ไขโนด');
+      if ( !ope.obj.hasOwnProperty('children') || ope.obj.children.length == 0 ){ //ไม่มีลูก ไม่มี desc
+        let singledata =
+        {
+          title: ope.obj.topic,
+          description: null,
+          published: false,
+          priority: false,
+          duedate: null,
+          nodeid: ope.obj.nodeid
+        }
+        TodoListDataService.update(ope.obj.id,singledata)
+          .then(response => {
+              console.log('Update single title node',response.data);
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else { //มีลูก desc แก้ไขรายการ title นี้ให้หมด
+        for ( let i=0 ; i < ope.obj.children.length ; i++ ) {
+          let multipledata =
           {
-            name: 'Delete Tag',
-            onclick: () => {
-              console.log('deltagselectnode ',selectnode)
-              mind.updateNodeTags(selectnode,[])
-            },
+            title: ope.obj.topic,
+            description: ope.obj.children[i].topic,
+            published: false,
+            priority: false,
+            duedate: null,
+            nodeid: ope.obj.children[i].id
           }
-        ],
-      },
+          TodoListDataService.update(ope.obj.children[i].id,multipledata)
+          .then(response => {
+              console.log('Update multiple title node',response.data);
+          })
+          .catch(e => {
+              console.log(e);
+          });
+        }
+        setTimeout(() => { console.log('wait 2 seconds');afterUpdate(); }, 2000)
+      }
     }
+  }
+  const updateDescNode = (ope) => { //แก้ไขโนดชื่อข้อมูล Description
+    updateCheck = true;
 
-    mind = new MindElixir(optionsdata);
-
-    hotkeys('t', function(event, handler) {
-      event.preventDefault();
-      console.log('todotagselectnode ',selectnode)
-      if ( selectnode !== undefined && selectnode !== null ) {
-        mind.updateNodeTags(selectnode,['Todo'])
-        mind.refresh();
-      }
-    });
-
-    hotkeys('d', function(event, handler) {
-      event.preventDefault();
-      console.log('deltodoselectnode ',selectnode)
-      if ( selectnode !== undefined && selectnode !== null ) {
-        mind.updateNodeTags(selectnode,[])
-        mind.refresh();
-      }
-    });
-
-    mind.initSide();
-    mind.getAllDataString();
-
-    mindstring = mind.getAllData();
-
-    //////////////////อัพเดท db ตามไฟล์ที่ import ทันที///////////
-
-    console.log('Update DB from imported file')
-
-    let todoImport = [];
-    let mindImport = mind.getAllData();
-    todoImport = getAllTodo(mindImport.nodeData,todoImport);
-    console.log(todoImport);
-    exportTodo(todoImport)
-
-    /////////////////////////////////////////////////////////
-
-    mind.bus.addListener('operation', operation => {
-
-      console.log(operation);
-      mindstring = mind.getAllData();
-
-      console.log(operation);
-      mindstring = mind.getAllData();
-
-      //เพิ่ม tags Todo
-      if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
-        if ( operation.name == 'editTags' || operation.name == 'removeNode' || operation.name == 'finishEdit') {
-          if ( operation.obj.tags.includes('Todo') || operation.origin.includes('Todo') ) {
-            console.log(operation);
-            console.log("====Todo Title trigger====")
-
-            let todoObj = [];
-            let mindTodo = mind.getAllData();
-            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-            console.log(todoObj);
-            exportTodo(todoObj)
-          }
+    if ( ope.name == 'removeNode' ) { //ลบโนดไปเลย -ลบ
+      console.log('D ลบโนดไปเลย');
+      if (ope.obj.parent.children.length == 0){ //ไม่มีลูกแล้ว ลบแล้วสร้าง todo ที่ desc เป็น null
+        console.log('ลูกตัวท้าย')
+        TodoListDataService.delete(ope.obj.id)
+          .then(response => {
+              console.log('Delete',response.data);
+              let data = 
+              {
+                title: ope.obj.parent.topic,
+                description: null,
+                published: false,
+                priority: false,
+                duedate: null,
+                nodeid: Date.now()+ope.obj.parent.topic.replace(/ /g,"_")
+              }
+              TodoListDataService.create(data)
+                .then(response => {
+                    console.log('Add',response.data);
+                    afterUpdate();
+                })
+                .catch(e => {
+                    console.log(e);
+                });
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else {
+      //console.log(ope.obj.id);
+        TodoListDataService.delete(ope.obj.id)
+          .then(response => {
+              console.log('Delete',response.data);
+              afterUpdate();
+          })
+          .catch(e => {
+              console.log(e);
+          });
         }
-      } else if ( !operation.obj.hasOwnProperty('root') && operation.obj.parent.hasOwnProperty('tags') ) { //ตัวมันคือ desc พ่อเป็น todo title
-        if ( operation.name == 'removeNode' || operation.name == 'finishEdit' ) {
-          if ( operation.obj.parent.tags.includes('Todo') ) {
-            console.log(operation);
-            console.log("====Todo Desc trigger====")
 
-            let todoObj = [];
-            let mindTodo = mind.getAllData();
-            todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-            console.log(todoObj);
-            exportTodo(todoObj)
-          }
+    } else if ( ope.name == 'finishEdit' && ope.origin == 'new node') { //เพิ่มโนด -สร้าง
+      console.log('D เพิ่มโนด');
+      console.log(ope.obj.parent.hasOwnProperty('children'))
+      if (ope.obj.parent.children.length == 1){ //ลูกตัวเดียวใหม่ ลบตัวเดี่ยวแล้วสร้างตัวมี desc
+        let data =
+        {
+          title: ope.obj.parent.topic,
+          description: ope.obj.topic,
+          published: false,
+          priority: false,
+          duedate: null,
+          nodeid: ope.obj.id
         }
+        TodoListDataService.delete(ope.obj.parent.id)
+          .then(response => {
+            console.log('Delete single node with no desc',response.data);
+            TodoListDataService.create(data)
+              .then(response => {
+                  console.log('Add new to (new desc node)',response.data);
+                  afterUpdate();
+              })
+              .catch(e => {
+                  console.log(e);
+              });
+          })
+          .catch(e => {
+              console.log(e);
+          });
+      } else {
+        let datatemp =
+        {
+          title: ope.obj.parent.topic,
+          description: ope.obj.topic,
+          published: false,
+          priority: false,
+          duedate: null,
+          nodeid: ope.obj.id
+        }
+        TodoListDataService.create(datatemp)
+          .then(response => {
+              console.log('Add new to (new desc node)',response.data);
+              afterUpdate();
+          })
+          .catch(e => {
+              console.log(e);
+          });
       }
-
-    })
-    mind.bus.addListener('selectNode', node => {
-      //console.log('selectnode ',node)
-      selectnode = node;
-    })
-    mind.bus.addListener('unselectNode', node => {
-      //console.log('selectnode ',node)
-      selectnode = node;
-    })
+      
+    } else if ( ope.name == 'finishEdit' ) { //แก้ไข -อัพเดท
+      console.log('D แก้ไขโนด');
+      let data =
+      {
+        title: ope.obj.parent.topic,
+        description: ope.obj.topic,
+        published: false,
+        priority: false,
+        duedate: null,
+        nodeid: ope.obj.id
+      }
+      TodoListDataService.update(ope.obj.id,data)
+        .then(response => {
+            console.log('Edit',response.data);
+            afterUpdate();
+        })
+        .catch(e => {
+            console.log(e);
+        });
+    }
   }
 
-  //Export ไปยัง Database
+  //ทุกครั้งที่ส่งข้อมูลจะดึง data db แล้วเก็บใน temp
+  const afterUpdate = () => {
+    TodoListDataService.getAll()
+      .then(response => {
+        if(!(JSON.stringify(response.data) == JSON.stringify(dbMindmap)) && selectnode == undefined && updateCheck == false){
+          console.log('update Mindmap');
+          console.log(response.data)
+          dbMindmap = response.data;
+          let dbjson = databaseToJSON(response.data);
+          mind.nodeData = dbjson.nodeData;
+          mind.refresh();
+          updateCheck = false;
+        }
+      })
+      .catch(e => {
+        console.log(e)
+      });
+  }
+
+  //Export ไปยัง Database (แบบเก่า) จะใช้กับ import JSON
   const exportTodo = (todoData) => {
     updateCheck = true;
     TodoListDataService.deleteAll()
       .then(response => {
-        //console.log('Delete old Todo')
         for (var k = 0 ; k < todoData.length ; k++){
 
           TodoListDataService.create(todoData[k])
@@ -322,9 +450,7 @@ function App() {
             .catch(e => {
               console.log(e)
             });
-
         }, 2000);
-        //window.alert("Add Todo Completed");
       })
       .catch(e => {
         console.log(e);
@@ -342,33 +468,36 @@ function App() {
         "children": []
       }
     }
-    //console.log(dbjson)
-    //console.log(db)
-
     const result = Array.from(new Set(db.map(s => s.title)))
     .map(titles => {
       var desctemp = [];
-      var arraytemp = db.filter(s => s.title === titles).map(a => a.description);
-      for (let i = 0 ; i < arraytemp.length ; i++) {
-        if (arraytemp[i] == null) {
-
+      var idtemp = '';
+      var descarraytemp = db.filter(s => s.title === titles).map(a => a.description);
+      var idarraytemp = db.filter(s => s.title === titles).map(a => a.nodeid);
+      for (let i = 0 ; i < descarraytemp.length ; i++) {
+        if ( descarraytemp[i] == null ) {
         } else {
           desctemp.push({
-            "topic": arraytemp[i],
-            "id": Date.now()+arraytemp[i].replace(/ /g,"_")
+            "topic": descarraytemp[i],
+            "id": idarraytemp[i]
           })
         }
       }
+      if ( descarraytemp[0] == null ) {
+        console.log(titles + ' no children')
+        idtemp = idarraytemp[0]
+      } else {
+        idtemp = Date.now()+titles.replace(/ /g,"_")
+      }
       return {
         topic: titles,
-        id: Date.now()+titles.replace(/ /g,"_"),
+        id: idtemp,
         tags: ['Todo'],
         children: desctemp
       }
     })
-    //console.log('node add from db',result);
     dbjson.nodeData.children = result;
-    //console.log('Mindmap ',dbjson);
+    console.log('Mindmap ',dbjson.nodeData.children);
     return dbjson;
   }
 
@@ -376,8 +505,6 @@ function App() {
   const getAllTodo = (obj,objArray) => {
 
     for (var i = 0 ; i < obj.children.length ; i++){ //ไล่ทุกลูกของ root => Title Todo
-
-      //console.log(obj.children[i].topic)
 
       if ( obj.children[i].hasOwnProperty('tags') ) {
         for ( var j = 0 ; j < obj.children[i].tags.length ; j++) {
@@ -390,7 +517,8 @@ function App() {
                 description: null,
                 published: false,
                 priority: false,
-                duedate: null
+                duedate: null,
+                nodeid: obj.children[i].id
               }
               objArray.push(tododata);
 
@@ -404,11 +532,10 @@ function App() {
                   description: obj.children[i].children[j].topic,
                   published: false,
                   priority: false,
-                  duedate: null
+                  duedate: null,
+                  nodeid: obj.children[i].children[j].id
                 }
                 objArray.push(tododata);
-                //console.log(tododata);
-
               }
             }
             break;
@@ -419,163 +546,33 @@ function App() {
     return objArray;
   }
 
-  //Choose File
+  //(Import JSON) Choose JSON File
   const readJSON = (e) => {
     const fileReader = new FileReader();
     fileReader.readAsText(e.target.files[0], "UTF-8");
     fileReader.onload = e => {
-      console.log("e.target.result", e.target.result);
+      console.log(e.target.result);
       datajson = e.target.result;
-      importData(datajson);
+      //importData(datajson);
+      let parsedata = JSON.parse(datajson)
+      mind.nodeData = parsedata.nodeData;
+      mind.refresh();
+      
+      let todoImport = [];
+      let mindImport = mind.getAllData();
+      todoImport = getAllTodo(mindImport.nodeData,todoImport);
+      console.log(todoImport);
+      if ( todoImport.length == 0 ){
+        console.log('Not update, no todo node')
+        //ถ้าที่ import มาไม่มีโนด tag todo เลยจะไม่อัพเดทขึ้น db
+      } else {
+        console.log('Update DB from imported file')
+        exportTodo(todoImport);
+      }
     };
   };
 
-  //Create powerpoint slide
-  const createFirstSlide = (obj,pptx) => {
-    if (obj.length === 0){
-      return;
-    } else {
-
-      let slide = pptx.addSlide({ masterName: "FontPage" });
-      slide.addText(obj, {x:0.5, y: 2, h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 72, align: "center", bold:true })
-      slide.background = {path : 'https://i2.wp.com/files.123freevectors.com/wp-content/original/125250-blue-and-white-water-background.jpg?w=800&q=95'}
-    
-    }
-  }
-  //Export to powerpoint
-  const createSlide = (obj,pptx) => {
-    //var mindObj = mind.getAllData()
-    //console.log(obj.topic);
-    
-
-    if (!('children' in obj) || obj.children.length === 0){
-      return;
-    } else {
-
-      let slide = pptx.addSlide();
-      slide.addText(obj.topic, {x:0.5, y:"5%" , h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 24, align: "center", bold:true })
-
-      var strcount = 0;
-      var childrentext = []
-      var checkBullet = 0;
-
-      for (var i = 0 ; i < obj.children.length ; i++){
-
-        console.log(obj.children[i].topic);
-        console.log('checkBullet '+ checkBullet);
-
-        strcount+=obj.children[i].topic.length;
-        
-        if ( (i+1) % 11 == 0 ) {
-          console.log('number 11 bullet push to new slide krub')
-          slide.addText(childrentext, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top"});
-
-          slide = pptx.addSlide();
-          slide.addText(obj.topic + ' (ต่อ)', {x:0.5, y:"5%" , h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 24, align: "center", bold:true })
-
-
-          childrentext = [];
-          childrentext.push({ text: obj.children[i].topic, options: {fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  } })
-          strcount = 0;
-          checkBullet = 0;
-
-        } else if ( strcount > 1000 ) {
-
-          if ( childrentext.length == 0 ){ //เป็นลูกตัวแรกแล้วใหญ่เกินกล่อง ให้ทำตั้งแต่หน้าแรก
-
-            var firstslideText = obj.children[i].topic.slice(0,1000);
-            slide.addText(firstslideText, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top", fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  });
-            var whilecountIf = Math.ceil(obj.children[i].topic.length / 1000) - 1;
-
-            var slicenumStart = 1001;
-            var slicenumEnd = 2000;
-
-            while ( whilecountIf !== 0 ) {
-
-              let newSlide = pptx.addSlide();
-              newSlide.addText(obj.topic + ' (ต่อ)', {x:0.5, y:"5%" , h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 24, align: "center", bold:true })
-              
-              var topicSlice = obj.children[i].topic.slice(slicenumStart,slicenumEnd);
-              if (slicenumStart == 0){
-                newSlide.addText(topicSlice, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top",fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  });
-              } else {
-                newSlide.addText(topicSlice, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top",fontFace: "Courier", fontSize: 14, breakLine: true  });
-              }
-              whilecountIf -= 1;
-              slicenumStart = slicenumEnd;
-              if( Math.floor(obj.children[i].topic.length / 1000) !== 0 ) {
-                slicenumEnd = slicenumEnd+1000;
-              } else {
-                slicenumEnd = obj.children[i].topic.length;    
-              }    
-            }
-
-          } else { //ให้ทำหน้าต่อไป (หัวข้อมี (ต่อ) เติมท้าย)
-
-            slide.addText(childrentext, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top", fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  });
-
-            var whilecount = Math.ceil(obj.children[i].topic.length / 1000); //หารแล้วปัดขึ้น (2.3 => 3)
-            console.log(whilecount);
-            var slicenumStart = 0;
-            var slicenumEnd = 1000;
-
-            while ( whilecount !== 0 ) {
-
-              let newSlide = pptx.addSlide();
-              newSlide.addText(obj.topic + ' (ต่อ)', {x:0.5, y:"5%" , h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 24, align: "center", bold:true })
-              
-              var topicSlice = obj.children[i].topic.slice(slicenumStart,slicenumEnd);
-              if (slicenumStart == 0){
-                newSlide.addText(topicSlice, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top",fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  });
-              } else {
-                newSlide.addText(topicSlice, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top",fontFace: "Courier", fontSize: 14, breakLine: true  });
-              }
-              whilecount -= 1;
-              slicenumStart = slicenumEnd;
-              if( Math.floor(obj.children[i].topic.length / 1000) !== 0 ) {
-                slicenumEnd = slicenumEnd+1000;
-              } else {
-                slicenumEnd = obj.children[i].topic.length;    
-              }    
-            }
-          }
-
-          childrentext = [];
-          strcount = 0;
-
-          if ( i !== obj.children.length-1 ){
-
-            slide = pptx.addSlide();
-            slide.addText(obj.topic + ' (ต่อ)', {x:0.5, y:"5%" , h: 1, w: "90%", fontFace: "Courier", fontWeight: 'bold', fontSize: 24, align: "center", bold:true })
-            checkBullet = 0;
-          }
-
-        } else {
-          childrentext.push({ text: obj.children[i].topic, options: {fontFace: "Courier", fontSize: 14, bullet: true, breakLine: true  } })
-          checkBullet += 1;
-        }
-
-      }
-
-      slide.addText(childrentext, { x: 0.5, y: "25%", w: "90%", h: 4 ,valign:"top"});
-
-      for (var j = 0 ; j < obj.children.length ; j++){
-        createSlide(obj.children[j],pptx);
-      }
-
-    }
-  }
-  //Download pptx
-  const exportPPTX = () => {
-
-    var pptx = new PptxGenJS();
-    var mindObj = mind.getAllData();
-    createFirstSlide(mindObj.nodeData.topic, pptx);
-    createSlide(mindObj.nodeData,pptx);
-    pptx.writeFile({ fileName: "mindmap.pptx" });
-
-  };
-
+  //ให้กลางหน้าจอไปอยู่ที่โนดนั้นๆ
   const goToNode = (width,heigth) => {
     //console.log(mind.container)
     //console.log(10000-(mind.container.offsetWidth/2),10000-(mind.container.offsetHeight/2))
@@ -591,6 +588,7 @@ function App() {
   var lastIdCheck = false;
   var foundId = false;
 
+  //ค้นหาชื่อ
   const searchNode = (e) => {
     e.preventDefault();
 
@@ -686,6 +684,7 @@ function App() {
     }
   }
 
+  //เข้าถึงโนดทุกตัวเพื่อหาตัวที่เจอ
   const searchData = (obj,text) => {
 
     //console.log(obj.topic,text)
@@ -707,35 +706,6 @@ function App() {
     }
   }
 
-    //Export to Todo App by button (manually)
-  const exportTodoManually = () => {
-
-    var mindTodo = mind.getAllData();
-    var todoObj = [];
-    todoObj = getAllTodo(mindTodo.nodeData,todoObj);
-
-    console.log(todoObj);
-
-    TodoListDataService.deleteAll()
-      .then(response => {
-        console.log('Delete old Todo')
-        for (var k = 0 ; k < todoObj.length ; k++){
-
-          TodoListDataService.create(todoObj[k])
-            .then(response => {
-                console.log('Add ',response.data);
-            })
-            .catch(e => {
-                console.log(e);
-            });
-        }
-        window.alert("Add Todo Completed");
-      })
-      .catch(e => {
-        console.log(e);
-    });
-  }
-
   //Export JSON
   const exportData = () => {
     mindstring = mind.getAllData();
@@ -754,6 +724,7 @@ function App() {
     painter.exportPng(mind,'picture');
   }
 
+  //ของการค้นหา
   const handleChange = (event) => {
     searchString =  event.target.value;
     //console.log(searchString)

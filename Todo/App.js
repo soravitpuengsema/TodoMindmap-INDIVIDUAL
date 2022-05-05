@@ -38,19 +38,21 @@ function NowScreen({ navigation }) {
   //1
   React.useEffect(() => {
     const interval = setInterval(() => {
-      console.log('check DB every 3 seconds');
+      //console.log('check DB every 3 seconds');
       TodoListDataService.getAll()
         .then(response =>{
             if(!(JSON.stringify(response.data) == JSON.stringify(dbtemp)) && dbCheck == false){
               console.log('UPDATE DB (Mindmap changes)')
               setTodoSearch(response.data);
               setDataShow(response.data);
-              console.log(DataShow.length);
+              console.log(response.data);
               setNotFound(false);
               setSearchQuery();
               dbtemp = response.data;
             } else {
-              setNotFound(true);
+              if (setDataShow.length == 0){
+                setNotFound(true);
+              }
             }
         })
         .catch(e =>{
@@ -69,7 +71,7 @@ function NowScreen({ navigation }) {
         if(response.data){
           setTodoSearch(response.data);
           setDataShow(response.data);
-          console.log(DataShow.length);
+          console.log(response.data);
           setNotFound(false);
           setSearchQuery();
           dbtemp = response.data; //1
@@ -139,13 +141,20 @@ function NowScreen({ navigation }) {
 
   const handleAddTodo = (date) => {
     console.log(titleAdd);
+    var descTemp = '';
+    if (descAdd == null || descAdd == '' || descAdd == undefined){
+      descTemp = '';
+    } else {
+      descTemp = descAdd.replace(/ /g,"_")
+    }
     var data = 
     {
       title: titleAdd,
       description: descAdd,
       published: false,
       priority: false,
-      duedate: date
+      duedate: date,
+      nodeid: Date.now()+titleAdd.replace(/ /g,"_")+descTemp
     }
     setTitleAdd(null);
     setDescAdd(null);
@@ -175,11 +184,12 @@ function NowScreen({ navigation }) {
       description: descEdit,
       published: todoEdit.published,
       priority: todoEdit.priority,
-      duedate: date
+      duedate: todoEdit.duedate,
+      nodeid: todoEdit.nodeid
     }
     
     dbCheck = true; //1
-    TodoListDataService.update(todoEdit.id,data)
+    TodoListDataService.update(todoEdit.nodeid,data)
       .then(response => {
           console.log('Edit', response.data);
           setTitleEdit(null);
@@ -198,7 +208,9 @@ function NowScreen({ navigation }) {
 
   const handleDelete = (todo) => {
     dbCheck = true; //1
-    TodoListDataService.delete(todo.id)
+    console.log(todo)
+    console.log(typeof todo.nodeid)
+    TodoListDataService.delete(todo.nodeid)
     .then(response => {
         console.log('Delete',response.data);
         setTodoDelete(null);
@@ -226,10 +238,11 @@ function NowScreen({ navigation }) {
       description: todo.description,
       published: !todo.published,
       priority: todo.priority,
-      duedate: todo.duedate
+      duedate: todo.duedate,
+      nodeid: todo.nodeid
     }
     dbCheck = true; //1
-    TodoListDataService.update(todo.id,data)
+    TodoListDataService.update(todo.nodeid,data)
       .then(response => {
           console.log('click Completed',response.data);
           //forceUpdate();
@@ -255,10 +268,11 @@ function NowScreen({ navigation }) {
       description: todo.description,
       published: todo.published,
       priority: !todo.priority,
-      duedate: todo.duedate
+      duedate: todo.duedate,
+      nodeid: todo.nodeid,
     }
     dbCheck = true; //1
-    TodoListDataService.update(todo.id,data)
+    TodoListDataService.update(todo.nodeid,data)
       .then(response => {
           console.log('click Star',response.data);
           retrieveTodo();
@@ -460,10 +474,11 @@ function CompletedScreen({ navigation }) {
       description: descEdit,
       published: todoEdit.published,
       priority: todoEdit.priority,
-      duedate: date
+      duedate: todoEdit.duedate,
+      nodeid: todoEdit.nodeid
     }
     
-    TodoListDataService.update(todoEdit.id,data)
+    TodoListDataService.update(todoEdit.nodeid,data)
       .then(response => {
           console.log('Edit', response.data);
           setTitleEdit(null);
@@ -481,7 +496,7 @@ function CompletedScreen({ navigation }) {
   const [isDialogVisibleDelete, setIsDialogVisibleDelete] = useState(false);
 
   const handleDelete = (todo) => {
-    TodoListDataService.delete(todo.id)
+    TodoListDataService.delete(todo.nodeid)
     .then(response => {
         console.log('Delete',response.data);
         setTodoDelete(null);
@@ -509,9 +524,10 @@ function CompletedScreen({ navigation }) {
       description: todo.description,
       published: !todo.published,
       priority: todo.priority,
-      duedate: todo.duedate
+      duedate: todo.duedate,
+      nodeid: todo.nodeid
     }
-    TodoListDataService.update(todo.id,data)
+    TodoListDataService.update(todo.nodeid,data)
       .then(response => {
           console.log('click Completed',response.data);
           //forceUpdate();
@@ -537,9 +553,10 @@ function CompletedScreen({ navigation }) {
       description: todo.description,
       published: todo.published,
       priority: !todo.priority,
-      duedate: todo.duedate
+      duedate: todo.duedate,
+      nodeid: todo.nodeid
     }
-    TodoListDataService.update(todo.id,data)
+    TodoListDataService.update(todo.nodeid,data)
       .then(response => {
           console.log('click Star',response.data);
           retrieveTodo();
