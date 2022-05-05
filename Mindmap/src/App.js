@@ -153,6 +153,7 @@ function App() {
         
         if(!(JSON.stringify(response.data) == JSON.stringify(dbMindmap)) && selectnode == undefined && updateCheck == false){
           console.log('update Mindmap');
+          console.log(response.data)
           dbMindmap = response.data;
           let dbjson = databaseToJSON(response.data);
           mind.nodeData = dbjson.nodeData;
@@ -686,8 +687,10 @@ function App() {
   const searchData = (obj,text) => {
 
     //console.log(obj.topic,text)
+    let topicLower = obj.topic.toLowerCase();
+    let textLower = text.toLowerCase();
     
-    if (obj.topic.match(text)) {
+    if (topicLower.match(textLower)) {
       //console.log(obj.id)
       retrieveId.push(obj.id);
       foundId = true;
