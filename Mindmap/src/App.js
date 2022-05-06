@@ -1,7 +1,8 @@
 import './App.css';
 import React, { useState, useEffect} from 'react';
+import 'regenerator-runtime'
 import ReactDOM from "react-dom";
-import MindElixir, { E } from "mind-elixir";
+import MindElixir, { E } from "mind-elixir"
 import painter from 'mind-elixir/dist/painter';
 import { Button, Form, Modal } from 'react-bootstrap';
 import TodoListDataService from "./services/todo.service";
@@ -49,7 +50,7 @@ function App() {
           toolBar: true,
           nodeMenu: true,
           keypress: true,
-          allowUndo: true,
+          allowUndo: false,
           contextMenuOption: {
             focus: true,
             link: true,
@@ -707,93 +708,89 @@ function App() {
   const matches = useMediaQuery('(max-width:992px)');
 
   return (
-    <>
     <div>
-      <Form.Group controlId="formFile" className="mb-3">
-        <Form.Label>Import JSON File</Form.Label>
-        <Form.Control type="file" onChange={readJSON}/>
-      </Form.Group>
+      <div style={{width: "98%", margin:'auto',marginTop:'10px'}}>
+        <Form.Group controlId="formFile" className="mb-3">
+          <Form.Label>Import JSON File</Form.Label>
+          <Form.Control type="file" onChange={readJSON}/>
+        </Form.Group>
+      </div>
+      <div style={{width: "98%", margin:'auto', marginBottom: '15px'}}>
+        <Button variant="primary" onClick={() => paint()}>Export PNG</Button>{'  '}
+        <Button variant="success" onClick={() => exportData()}>Export JSON</Button>
+        <Popup
+          trigger={<Fab
+              sx={{
+                position: "fixed",
+                bottom: (theme) => theme.spacing(2),
+                right: (theme) => theme.spacing(2)
+              }}
+              color="secondary"
+              >
+            <QuestionMarkIcon />
+            </Fab>} modal>
+            <div style={{display:'block'}}>
+            <Modal.Dialog size={'lg'} >
+              <Modal.Header>
+                <Modal.Title style={{fontSize:'26px'}}>การใช้งาน MindmapTodo</Modal.Title>
+                <LightbulbIcon color='primary'></LightbulbIcon>
+              </Modal.Header>
+              <Modal.Body style={{textAlign:'center',fontSize:'18px',maxHeight: 'calc(100vh - 300px)',overflowY: 'auto'}}>
+              <ReactPlayer loop={true} playing={true} volume={null} muted={true} height={matches? '238px':'400px'} width={'100%'} url='https://streamable.com/96kl0l' />
+                <p>
+                  <br/>
+                  สร้าง แก้ไข ลบโนดในมายแมพได้ง่ายๆเพียงแค่คลิกขวาที่โนด จากนั้นเลือกจากเมนูหรือกดปุ่มคีย์ลัดดังนี้
+                  <br/>
+                  <br/>
+                  สร้างลูกโนด: Tab
+                  <br/>
+                  สร้างโนดพี่น้อง: Enter
+                  <br/>
+                  ลบโนด: Delete
+                  <br/>
+                  เพิ่มแท็ก Todo: t
+                  <br/>      
+                  ลบแท็ก Todo: d
+                </p>
+                <p>
+                  <br/>
+                  โดยลูกของโนดเริ่มต้นที่มีแท็ก Todo นั้นจะถูกสร้างเป็นรายการ Todo โดยโนดตัวนั้นจะเป็นชื่อ Title ของ
+                  <br/>
+                  รายการ Todo ถ้าโนดนี้ไม่มีลูกจะเป็นรายการที่ไม่มีข้อมูล Description
+                  <br/>
+                </p>
+                <img style={{width:'80%'}}src='https://i.ibb.co/t8z0GDX/nodesc.png' alt='nodesc'></img>
+                <p>
+                  <br/>
+                  <br/>
+                  ถ้าโนด Title มีลูก ลูกตัวนั้นจะเป็น Description ของรายการ Todo นั้น เช่น กรณีมีลูกตัวเดียว
+                  <br/>
+                </p>
+                <img style={{width:'80%'}}src='https://i.ibb.co/Cs1VcK1/single-desc.png' alt='singledesc'></img>
+                <p>
+                  <br/>
+                  <br/>
+                  ถ้าโนด Title มีลูกหลายตัว จะเป็นการสร้างรายการ Todo ตามจำนวนลูก โดยมี Title เหมือนกันแต่
+                  <br/>
+                  มี Description ที่ต่างกันตามโนดลูกแต่ละตัว
+                  <br/>
+                </p>
+                <img style={{width:'80%'}}src='https://i.ibb.co/z6Sb20v/multipledesc.png' alt='multipledesc'></img>
+              </Modal.Body>
+            </Modal.Dialog>
+            </div>
+        </Popup>
+      </div>
+      <div style={{width: "98%", margin:'auto', marginBottom: '15px'}}>
+        <Select 
+          options={searchList} 
+          onChange={findNodeCoordinates}
+          placeholder='ค้นหาโนด...'
+          noOptionsMessage={() => 'ไม่เจอโนดชื่อนี้'}
+          />
+      </div>
+      <div id="map" style={{height: 'calc(100vh - 280px)', width: "98%", margin:'auto' }} />
     </div>
-    <div>
-      <Select 
-        options={searchList} 
-        onChange={findNodeCoordinates}
-        />
-    </div>
-    <div >
-      <Button variant="outline-secondary" onClick={() => paint()}>Export PNG</Button>{' '}
-      <Button variant="outline-success" onClick={() => exportData()}>Export JSON</Button>{' '}
-      {/* <Button variant="outline-success" onClick={() => goToNode()}>search</Button>{' '}   */}
-      <Popup
-        trigger={<Fab
-            sx={{
-              position: "fixed",
-              bottom: (theme) => theme.spacing(2),
-              right: (theme) => theme.spacing(2)
-            }}
-            color="secondary"
-            >
-          <QuestionMarkIcon />
-          </Fab>} modal>
-          <div style={{display:'block'}}>
-          <Modal.Dialog size={'lg'} >
-            <Modal.Header>
-              <Modal.Title style={{fontSize:'26px'}}>การใช้งาน MindmapTodo</Modal.Title>
-              <LightbulbIcon color='primary'></LightbulbIcon>
-            </Modal.Header>
-            <Modal.Body style={{textAlign:'center',fontSize:'18px',maxHeight: 'calc(100vh - 300px)',overflowY: 'auto'}}>
-            <ReactPlayer loop={true} playing={true} volume={null} muted={true} height={matches? '238px':'400px'} width={'100%'} url='https://streamable.com/96kl0l' />
-              <p>
-                <br/>
-                สร้าง แก้ไข ลบโนดในมายแมพได้ง่ายๆเพียงแค่คลิกขวาที่โนด จากนั้นเลือกจากเมนูหรือกดปุ่มคีย์ลัดดังนี้
-                <br/>
-                <br/>
-                สร้างลูกโนด: Tab
-                <br/>
-                สร้างโนดพี่น้อง: Enter
-                <br/>
-                ลบโนด: Delete
-                <br/>
-                เพิ่มแท็ก Todo: t
-                <br/>      
-                ลบแท็ก Todo: d
-              </p>
-              <p>
-                <br/>
-                โดยลูกของโนดเริ่มต้นที่มีแท็ก Todo นั้นจะถูกสร้างเป็นรายการ Todo โดยโนดตัวนั้นจะเป็นชื่อ Title ของ
-                <br/>
-                รายการ Todo ถ้าโนดนี้ไม่มีลูกจะเป็นรายการที่ไม่มีข้อมูล Description
-                <br/>
-                {/* ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title และถ้ามีลูกต่อเพิ่ม 
-                <br/>
-                โนดลูกนั้นจะเป็น Description ถ้ามีโนด Description ในโนด Title หลายตัวจะเป็นการสร้างรายการ
-                <br/>
-                Todo หลายรายการที่ชื่อเดียวกัน แต่มี Description ที่ต่างกันตามโนดนั้นๆ ถูกเพิ่มเข้าในแอพพลิเคชั่น */}
-              </p>
-              <img style={{width:'80%'}}src='https://i.ibb.co/t8z0GDX/nodesc.png' alt='nodesc'></img>
-              <p>
-                <br/>
-                <br/>
-                ถ้าโนด Title มีลูก ลูกตัวนั้นจะเป็น Description ของรายการ Todo นั้น เช่น กรณีมีลูกตัวเดียว
-                <br/>
-              </p>
-              <img style={{width:'80%'}}src='https://i.ibb.co/Cs1VcK1/single-desc.png' alt='singledesc'></img>
-              <p>
-                <br/>
-                <br/>
-                ถ้าโนด Title มีลูกหลายตัว จะเป็นการสร้างรายการ Todo ตามจำนวนลูก โดยมี Title เหมือนกันแต่
-                <br/>
-                มี Description ที่ต่างกันตามโนดลูกแต่ละตัว
-                <br/>
-              </p>
-              <img style={{width:'80%'}}src='https://i.ibb.co/z6Sb20v/multipledesc.png' alt='multipledesc'></img>
-            </Modal.Body>
-          </Modal.Dialog>
-          </div>
-      </Popup>
-    </div>
-    <div id="map" style={{ height: "600px", width: "100%" }} />
-    </>
   );
 }
 
