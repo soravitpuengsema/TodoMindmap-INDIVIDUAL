@@ -3,17 +3,15 @@ import React, { useState, useEffect} from 'react';
 import ReactDOM from "react-dom";
 import MindElixir, { E } from "mind-elixir";
 import painter from 'mind-elixir/dist/painter';
-import PptxGenJS from "pptxgenjs";
-import { Button, Form, InputGroup, FormControl } from 'react-bootstrap';
+import { Button, Form, Modal } from 'react-bootstrap';
 import TodoListDataService from "./services/todo.service";
 import Popup from 'reactjs-popup';
-import { Scrollbars } from 'react-custom-scrollbars-2';
 import mindmaptotodo from './tutorial.png';
 import Fab from '@mui/material/Fab';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import { paperClasses } from '@mui/material';
 import hotkeys from 'hotkeys-js';
-import { Box, ChakraProvider } from "@chakra-ui/react";
+import ReactPlayer from 'react-player'
 
 //
 
@@ -309,7 +307,7 @@ function App() {
                 published: false,
                 priority: false,
                 duedate: null,
-                nodeid: Date.now()+ope.obj.parent.topic.replace(/ /g,"_")
+                nodeid: ope.obj.parent.id //Date.now()+ope.obj.parent.topic.replace(/ /g,"_")
               }
               TodoListDataService.create(data)
                 .then(response => {
@@ -762,21 +760,44 @@ function App() {
               right: (theme) => theme.spacing(2)
             }}
             color="secondary"
-    >
-            <QuestionMarkIcon />
+            >
+          <QuestionMarkIcon />
           </Fab>} modal>
-          <div className='container'>
-            <div style={{fontWeight: 'bold', textAlign: 'center', marginTop: '15px', fontSize: '25px'}}> Create Mindmap for Todo List </div>
-            <div style ={{textAlign: 'center', marginBottom: '15px'}}>
-              <br />
-              การจะ Export Mindmap ไปยัง TodoList นั้น Mindmap จะต้องมีเงื่อนไขดังนี้
-              <br />
-              <img src={mindmaptotodo} style={{height:'400px'}}></img>
-              <br />
-              ลูกของหัวข้อจะเป็น Title รายการ Todo และลูกของ Title นั้นจะเป็น Description ซึ่งเมื่อกดปุ่ม Export ไปยัง Todo App แล้วจะเป็นไปดังภาพ
-              <br />
-            </div>
-          </div>
+          
+          <Modal.Dialog size={'lg'}>
+            <Modal.Header>
+              <Modal.Title style={{textAlign:'center'}}>การใช้งาน MindmapTodo</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <ReactPlayer loop={true} playing={true} volume={null} muted={true} width={'100%'} url='https://streamable.com/96kl0l' />
+            </Modal.Body>
+            <Modal.Body style={{textAlign:'center',fontSize:'16px'}}>
+              <p>
+                สร้าง แก้ไข ลบโนดในมายแมพได้ง่ายๆเพียงแค่คลิกขวาที่โนด จากนั้นเลือกจากเมนูหรือกดปุ่มคีย์ลัดดังนี้
+                <br/>
+                <br/>
+                สร้างลูกโนด: Tab
+                <br/>
+                สร้างโนดพี่น้อง: Enter
+                <br/>
+                ลบโนด: Delete
+                <br/>
+                เพิ่มแท็ก Todo: t
+                <br/>      
+                ลบแท็ก Todo: d    
+                <br/>
+                <br/>
+                ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title
+                <br/>
+                และถ้ามีลูกอีก โนดลูกจะเป็น Description ถ้ามีหลายตัวจะเป็นการสร้างรายการ
+                <br/>
+                Todo ชื่อเดียวกันแต่มีเป็นคนละ Description ถูกเพิ่มเข้าในแอพพลิเคชั่น TodoList 
+                <br/>
+                ที่ใช้ได้ทั้งระบบปฏิบัติการ iOS, Android และ Web Application
+              </p>
+            </Modal.Body>
+          </Modal.Dialog>
+          
       </Popup>
     </div>
     <div id="map" style={{ height: "600px", width: "100%" }} />
