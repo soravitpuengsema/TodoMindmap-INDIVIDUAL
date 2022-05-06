@@ -12,21 +12,23 @@ import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import { paperClasses } from '@mui/material';
 import hotkeys from 'hotkeys-js';
 import ReactPlayer from 'react-player'
+import Select from 'react-select'
 
 //
-
-var mindstring = '';
-
-let datajson = '';
-
-let updateCheck = false;
+let mind = null;
 
 function App() {
+  var mindstring = '';
+  let datajson = '';
+  let updateCheck = false;
 
-  let mind = null;
+  //let mind = null;
   let selectnode = null;
   let dbnow = null;
   let dbMindmap = null;
+
+  //var searchList = [];
+  const [searchList, setSearchList] = React.useState([]);
 
   //สร้างมายแมพ
   useEffect(() => {
@@ -75,6 +77,9 @@ function App() {
     
         mind.getAllDataString();
 
+        setSearchList([]);
+        searchDropdown(mind.nodeData);
+
         hotkeys('t', function(event, handler) {
           event.preventDefault();
           console.log('todotagselectnode ',selectnode)
@@ -96,6 +101,8 @@ function App() {
         mind.bus.addListener('operation', operation => {
     
           mindstring = mind.getAllData();
+          setSearchList([]);
+          searchDropdown(mind.nodeData);
     
           //เพิ่ม tags Todo
           if (operation.obj.hasOwnProperty('tags') ) { //ตัวมันเองคือ todo title
@@ -144,6 +151,9 @@ function App() {
           let dbjson = databaseToJSON(response.data);
           mind.nodeData = dbjson.nodeData;
           mind.refresh();
+
+          setSearchList([]);
+          searchDropdown(dbjson.nodeData);
         }
       })
       .catch(e =>{
@@ -414,6 +424,8 @@ function App() {
           let dbjson = databaseToJSON(response.data);
           mind.nodeData = dbjson.nodeData;
           mind.refresh();
+          setSearchList([]);
+          searchDropdown(dbjson.nodeData);
           updateCheck = false;
         }
       })
@@ -555,6 +567,8 @@ function App() {
       let parsedata = JSON.parse(datajson)
       mind.nodeData = parsedata.nodeData;
       mind.refresh();
+      setSearchList([]);
+      searchDropdown(mind.nodeData);
       
       let todoImport = [];
       let mindImport = mind.getAllData();
@@ -586,98 +600,21 @@ function App() {
   var lastIdCheck = false;
   var foundId = false;
 
-  //ค้นหาชื่อ
-  const searchNode = (e) => {
-    e.preventDefault();
-
-    if (searchString == ''){ //ไม่ใส่อะไรในช่องเซิช
-      window.alert('Type something!')
-      searchTemp = '';
+  //สร้างลิสต์ dropdown
+  const searchDropdown = (obj) => {
+    //console.log(obj.topic,text)
+    if (!('children' in obj) || obj.children.length === 0 ){ //ถ้าไม่มีลูกและไม่ใช่ root Todo ข้าม
+      if ( !obj.hasOwnProperty('root') ){
+        setSearchList(searchList => [...searchList,{value: obj.id, label: obj.topic}])
+      }
       return;
-    }
-    if (searchString !== searchTemp){ //เซิชคำใหม่ รีทั้งหมด
-      console.log(searchString, searchTemp)
-      console.log('แก้คำใหม่ เซิชใหม่')
-      foundId = false;
-      lastIdCheck = false;
-    }
 
-    console.log(retrieveId);
-    var allMind = mind.getAllData();
-
-    if (foundId == false && lastIdCheck == false){ //เริ่มเซิชใหม่
-      console.log('เริ่มเซิชใหม่')
-      retrieveId = [];
-      searchData(allMind.nodeData,searchString);
-      searchTemp = searchString;
-      console.log(retrieveId);
-    }
-
-    if (foundId == false){ //ไม่เจอเลย
-      window.alert(searchString + ' not found.')
-      lastIdCheck = false;
-    } else { //เจออยู่ก็ไปหาโนดนั้นๆ
-
-      mind.selectNode(E(retrieveId[0]))
-
-      let xystring = E(retrieveId[0]).parentElement.parentElement.getAttribute('style');
-
-      if ( xystring == null ){
-        xystring = E(retrieveId[0]).parentElement.parentElement.parentElement.parentElement.getAttribute('style');
+    } else { //มีลูก ไล่ทำลูกทุกตัว
+      if ( !obj.hasOwnProperty('root') ){
+        setSearchList(searchList => [...searchList,{value: obj.id, label: obj.topic}])
       }
-
-      let stringsplit = xystring.split(' ')
-
-      var wpointcheck = false;
-      var hpointcheck = false;
-      var heigthsplit = stringsplit[1]
-      var widthsplit = stringsplit[3]
-
-      if (stringsplit[1].includes('.')){
-        heigthsplit = stringsplit[1].split('.')
-        heigthsplit = heigthsplit[0]
-        hpointcheck = true;
-      }
-      if (stringsplit[3].includes('.')){
-        widthsplit = stringsplit[3].split('.')
-        widthsplit = widthsplit[0]
-        wpointcheck = true;
-      }
-      else{
-        heigthsplit = stringsplit[1];
-        widthsplit = stringsplit[3];
-      }
-      
-      var heightNum = heigthsplit.match(/\d/g).join("");
-      var widthNum = widthsplit.match(/\d/g).join("");
-
-      if (hpointcheck){
-        heightNum += '.5'
-      }
-      if (wpointcheck){
-        widthNum += '.5'
-      }
-
-      goToNode(widthNum,heightNum)
-
-      if (retrieveId.length > 2){ //มากกว่า 2
-        retrieveId.shift();
-        console.log('มากกว่า 2');
-        foundId = true;
-        lastIdCheck = false;
-        console.log(foundId,lastIdCheck)
-      } else if (retrieveId.length == 2){ //ตัวรองท้าย
-        retrieveId.shift();
-        console.log('ตัวรองท้าย');
-        foundId = true;
-        lastIdCheck = true;
-        console.log(foundId,lastIdCheck)
-      } else { //ตัวสุดท้าย == 1 ตัดจบ
-        retrieveId.shift();
-        console.log('ตัวท้าย เริ่มใหม่');
-        lastIdCheck = false;
-        foundId = false;
-        console.log(foundId,lastIdCheck)
+      for (let i = 0 ; i < obj.children.length ; i++){
+        searchDropdown(obj.children[i])
       }
     }
   }
@@ -722,11 +659,51 @@ function App() {
     painter.exportPng(mind,'picture');
   }
 
-  //ของการค้นหา
-  const handleChange = (event) => {
-    searchString =  event.target.value;
-    //console.log(searchString)
+  const findNodeCoordinates = (event) => {
+    console.log(event)
+    mind.selectNode(E(event.value))
+
+    let xystring = E(event.value).parentElement.parentElement.getAttribute('style');
+
+    if ( xystring == null ){
+      xystring = E(event.value).parentElement.parentElement.parentElement.parentElement.getAttribute('style');
+    }
+
+    let stringsplit = xystring.split(' ')
+
+    var wpointcheck = false;
+    var hpointcheck = false;
+    var heigthsplit = stringsplit[1]
+    var widthsplit = stringsplit[3]
+
+    if (stringsplit[1].includes('.')){
+      heigthsplit = stringsplit[1].split('.')
+      heigthsplit = heigthsplit[0]
+      hpointcheck = true;
+    }
+    if (stringsplit[3].includes('.')){
+      widthsplit = stringsplit[3].split('.')
+      widthsplit = widthsplit[0]
+      wpointcheck = true;
+    }
+    else{
+      heigthsplit = stringsplit[1];
+      widthsplit = stringsplit[3];
+    }
+    
+    var heightNum = heigthsplit.match(/\d/g).join("");
+    var widthNum = widthsplit.match(/\d/g).join("");
+
+    if (hpointcheck){
+      heightNum += '.5'
+    }
+    if (wpointcheck){
+      widthNum += '.5'
+    }
+
+    goToNode(widthNum,heightNum)
   }
+
 
   return (
     <>
@@ -735,18 +712,12 @@ function App() {
         <Form.Label>Import JSON File</Form.Label>
         <Form.Control type="file" onChange={readJSON}/>
       </Form.Group>
-      <div>
-      <form>
-        <input
-          type="text"
-          name="text"
-          placeholder="Search..."
-          //value={searchtext}
-          onChange={handleChange}
-        />
-        <button onClick={(e)=>searchNode(e)}>Search</button>
-      </form>
     </div>
+    <div>
+      <Select 
+        options={searchList} 
+        onChange={findNodeCoordinates}
+        />
     </div>
     <div >
       <Button variant="outline-secondary" onClick={() => paint()}>Export PNG</Button>{' '}
@@ -766,7 +737,7 @@ function App() {
           
           <Modal.Dialog size={'lg'}>
             <Modal.Header>
-              <Modal.Title style={{textAlign:'center'}}>การใช้งาน MindmapTodo</Modal.Title>
+              <Modal.Title>การใช้งาน MindmapTodo</Modal.Title>
             </Modal.Header>
             <Modal.Body>
               <ReactPlayer loop={true} playing={true} volume={null} muted={true} width={'100%'} url='https://streamable.com/96kl0l' />
@@ -787,13 +758,13 @@ function App() {
                 ลบแท็ก Todo: d    
                 <br/>
                 <br/>
-                ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title
+                ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title และถ้ามีลูกต่อเพิ่ม 
                 <br/>
-                และถ้ามีลูกอีก โนดลูกจะเป็น Description ถ้ามีหลายตัวจะเป็นการสร้างรายการ
+                โนดลูกนั้นจะเป็น Description ถ้ามีโนด Description ในโนด Title หลายตัวจะเป็นการสร้างรายการ
                 <br/>
-                Todo ชื่อเดียวกันแต่มีเป็นคนละ Description ถูกเพิ่มเข้าในแอพพลิเคชั่น TodoList 
+                Todo หลายรายการที่ชื่อเดียวกัน แต่มี Description ที่ต่างกันตามโนดนั้นๆ ถูกเพิ่มเข้าในแอพพลิเคชั่น
                 <br/>
-                ที่ใช้ได้ทั้งระบบปฏิบัติการ iOS, Android และ Web Application
+                TodoList ที่ใช้ได้ทั้งระบบปฏิบัติการ iOS, Android และ Web Application
               </p>
             </Modal.Body>
           </Modal.Dialog>
