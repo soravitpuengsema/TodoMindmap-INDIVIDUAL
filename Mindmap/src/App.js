@@ -6,13 +6,13 @@ import painter from 'mind-elixir/dist/painter';
 import { Button, Form, Modal } from 'react-bootstrap';
 import TodoListDataService from "./services/todo.service";
 import Popup from 'reactjs-popup';
-import mindmaptotodo from './tutorial.png';
 import Fab from '@mui/material/Fab';
 import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
-import { paperClasses } from '@mui/material';
 import hotkeys from 'hotkeys-js';
 import ReactPlayer from 'react-player'
 import Select from 'react-select'
+import useMediaQuery from '@mui/material/useMediaQuery';
+import LightbulbIcon from '@mui/icons-material/Lightbulb';
 
 //
 let mind = null;
@@ -704,6 +704,7 @@ function App() {
     goToNode(widthNum,heightNum)
   }
 
+  const matches = useMediaQuery('(max-width:992px)');
 
   return (
     <>
@@ -734,16 +735,16 @@ function App() {
             >
           <QuestionMarkIcon />
           </Fab>} modal>
-          
-          <Modal.Dialog size={'lg'}>
+          <div style={{display:'block'}}>
+          <Modal.Dialog size={'lg'} >
             <Modal.Header>
-              <Modal.Title>การใช้งาน MindmapTodo</Modal.Title>
+              <Modal.Title style={{fontSize:'26px'}}>การใช้งาน MindmapTodo</Modal.Title>
+              <LightbulbIcon color='primary'></LightbulbIcon>
             </Modal.Header>
-            <Modal.Body>
-              <ReactPlayer loop={true} playing={true} volume={null} muted={true} width={'100%'} url='https://streamable.com/96kl0l' />
-            </Modal.Body>
-            <Modal.Body style={{textAlign:'center',fontSize:'16px'}}>
+            <Modal.Body style={{textAlign:'center',fontSize:'18px',maxHeight: 'calc(100vh - 300px)',overflowY: 'auto'}}>
+            <ReactPlayer loop={true} playing={true} volume={null} muted={true} height={matches? '238px':'400px'} width={'100%'} url='https://streamable.com/96kl0l' />
               <p>
+                <br/>
                 สร้าง แก้ไข ลบโนดในมายแมพได้ง่ายๆเพียงแค่คลิกขวาที่โนด จากนั้นเลือกจากเมนูหรือกดปุ่มคีย์ลัดดังนี้
                 <br/>
                 <br/>
@@ -755,20 +756,40 @@ function App() {
                 <br/>
                 เพิ่มแท็ก Todo: t
                 <br/>      
-                ลบแท็ก Todo: d    
+                ลบแท็ก Todo: d
+              </p>
+              <p>
                 <br/>
+                โดยลูกของโนดเริ่มต้นที่มีแท็ก Todo นั้นจะถูกสร้างเป็นรายการ Todo โดยโนดตัวนั้นจะเป็นชื่อ Title ของ
                 <br/>
-                ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title และถ้ามีลูกต่อเพิ่ม 
+                รายการ Todo ถ้าโนดนี้ไม่มีลูกจะเป็นรายการที่ไม่มีข้อมูล Description
+                <br/>
+                {/* ลูกของโนดเริ่มต้นที่มีแท็ก Todo จะถูกเพิ่มเป็นรายการ Todo โดยโนดนั้นจะเป็น Title และถ้ามีลูกต่อเพิ่ม 
                 <br/>
                 โนดลูกนั้นจะเป็น Description ถ้ามีโนด Description ในโนด Title หลายตัวจะเป็นการสร้างรายการ
                 <br/>
-                Todo หลายรายการที่ชื่อเดียวกัน แต่มี Description ที่ต่างกันตามโนดนั้นๆ ถูกเพิ่มเข้าในแอพพลิเคชั่น
-                <br/>
-                TodoList ที่ใช้ได้ทั้งระบบปฏิบัติการ iOS, Android และ Web Application
+                Todo หลายรายการที่ชื่อเดียวกัน แต่มี Description ที่ต่างกันตามโนดนั้นๆ ถูกเพิ่มเข้าในแอพพลิเคชั่น */}
               </p>
+              <img style={{width:'80%'}}src='https://i.ibb.co/t8z0GDX/nodesc.png' alt='nodesc'></img>
+              <p>
+                <br/>
+                <br/>
+                ถ้าโนด Title มีลูก ลูกตัวนั้นจะเป็น Description ของรายการ Todo นั้น เช่น กรณีมีลูกตัวเดียว
+                <br/>
+              </p>
+              <img style={{width:'80%'}}src='https://i.ibb.co/Cs1VcK1/single-desc.png' alt='singledesc'></img>
+              <p>
+                <br/>
+                <br/>
+                ถ้าโนด Title มีลูกหลายตัว จะเป็นการสร้างรายการ Todo ตามจำนวนลูก โดยมี Title เหมือนกันแต่
+                <br/>
+                มี Description ที่ต่างกันตามโนดลูกแต่ละตัว
+                <br/>
+              </p>
+              <img style={{width:'80%'}}src='https://i.ibb.co/z6Sb20v/multipledesc.png' alt='multipledesc'></img>
             </Modal.Body>
           </Modal.Dialog>
-          
+          </div>
       </Popup>
     </div>
     <div id="map" style={{ height: "600px", width: "100%" }} />

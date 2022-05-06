@@ -68,3 +68,9 @@
   background: #ffffff;
   box-shadow: 3px 5px 10px rgb(176, 176, 176);
 }
+
+@media screen and (max-width: 992px) {
+  .video {
+    height: 238px;
+  }
+}
