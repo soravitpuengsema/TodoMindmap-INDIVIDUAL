@@ -1,21 +1,23 @@
 import './App.css';
 import React, { useState, useEffect} from 'react';
-import 'regenerator-runtime'
 import ReactDOM from "react-dom";
+import 'regenerator-runtime'
+import TodoListDataService from "./services/todo.service";
 import MindElixir, { E } from "mind-elixir"
 import painter from 'mind-elixir/dist/painter';
 import { Button, Form, Modal } from 'react-bootstrap';
-import TodoListDataService from "./services/todo.service";
 import Popup from 'reactjs-popup';
-import Fab from '@mui/material/Fab';
-import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import hotkeys from 'hotkeys-js';
 import ReactPlayer from 'react-player'
 import Select from 'react-select'
+import Fab from '@mui/material/Fab';
+import QuestionMarkIcon from '@mui/icons-material/QuestionMark';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import LightbulbIcon from '@mui/icons-material/Lightbulb';
+import ImageIcon from '@mui/icons-material/Image';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
+import DownloadIcon from '@mui/icons-material/Download';
 
-//
 let mind = null;
 
 function App() {
@@ -23,12 +25,10 @@ function App() {
   let datajson = '';
   let updateCheck = false;
 
-  //let mind = null;
   let selectnode = null;
   let dbnow = null;
   let dbMindmap = null;
 
-  //var searchList = [];
   const [searchList, setSearchList] = React.useState([]);
 
   //สร้างมายแมพ
@@ -585,16 +585,6 @@ function App() {
     };
   };
 
-  //ให้กลางหน้าจอไปอยู่ที่โนดนั้นๆ
-  const goToNode = (width,heigth) => {
-    //console.log(mind.container)
-    //console.log(10000-(mind.container.offsetWidth/2),10000-(mind.container.offsetHeight/2))
-    mind.container.scrollTo(
-      width-906.5,
-      heigth-271
-    )
-  }
-
   var searchString = '';
   var searchTemp = '';
   var retrieveId = [];
@@ -616,28 +606,6 @@ function App() {
       }
       for (let i = 0 ; i < obj.children.length ; i++){
         searchDropdown(obj.children[i])
-      }
-    }
-  }
-
-  //เข้าถึงโนดทุกตัวเพื่อหาตัวที่เจอ
-  const searchData = (obj,text) => {
-
-    //console.log(obj.topic,text)
-    let topicLower = obj.topic.toLowerCase();
-    let textLower = text.toLowerCase();
-    
-    if (topicLower.match(textLower)) {
-      //console.log(obj.id)
-      retrieveId.push(obj.id);
-      foundId = true;
-
-    } else if (!('children' in obj) || obj.children.length === 0){
-      return;
-
-    } else {
-      for (let i = 0 ; i < obj.children.length ; i++){
-        searchData(obj.children[i],text)
       }
     }
   }
@@ -705,19 +673,29 @@ function App() {
     goToNode(widthNum,heightNum)
   }
 
+  //ให้กลางหน้าจอไปอยู่ที่โนดนั้นๆ
+  const goToNode = (width,heigth) => {
+    //console.log(mind.container)
+    console.log(10000-(mind.container.offsetWidth/2),10000-(mind.container.offsetHeight/2))
+    mind.container.scrollTo(
+      Number(width)-906.5,
+      Number(heigth)-271
+    )
+  }
+
   const matches = useMediaQuery('(max-width:992px)');
 
   return (
-    <div>
+    <div style={{backgroundColor:''}}>
       <div style={{width: "98%", margin:'auto',marginTop:'10px'}}>
         <Form.Group controlId="formFile" className="mb-3">
-          <Form.Label>Import JSON File</Form.Label>
+          <Form.Label><UploadFileIcon style={{marginRight:'2px'}}/>Import JSON File</Form.Label>
           <Form.Control type="file" onChange={readJSON}/>
         </Form.Group>
       </div>
       <div style={{width: "98%", margin:'auto', marginBottom: '15px'}}>
-        <Button variant="primary" onClick={() => paint()}>Export PNG</Button>{'  '}
-        <Button variant="success" onClick={() => exportData()}>Export JSON</Button>
+        <Button variant="primary" style={{marginRight:'15px'}} onClick={() => paint()}><ImageIcon style={{marginRight:'2px'}}/>Export to PNG</Button>
+        <Button variant="warning" onClick={() => exportData()}><DownloadIcon style={{marginRight:'2px'}}/>Export to JSON</Button>
         <Popup
           trigger={<Fab
               sx={{
@@ -725,7 +703,7 @@ function App() {
                 bottom: (theme) => theme.spacing(2),
                 right: (theme) => theme.spacing(2)
               }}
-              color="secondary"
+              color="primary"
               >
             <QuestionMarkIcon />
             </Fab>} modal>
@@ -789,7 +767,7 @@ function App() {
           noOptionsMessage={() => 'ไม่เจอโนดชื่อนี้'}
           />
       </div>
-      <div id="map" style={{height: 'calc(100vh - 280px)', width: "98%", margin:'auto' }} />
+      <div id="map" style={{height: 'calc(100vh - 290px)', width: "98%", margin:'auto' }} />
     </div>
   );
 }
